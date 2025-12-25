@@ -1,17 +1,28 @@
 import { CfnOutput } from 'aws-cdk-lib';
-import { ApiKey, ApiKeySourceType, Cors, LambdaIntegration, RestApi, UsagePlan } from 'aws-cdk-lib/aws-apigateway';
+import {
+  ApiKey,
+  ApiKeySourceType,
+  Cors,
+  LambdaIntegration,
+  RestApi,
+  UsagePlan,
+} from 'aws-cdk-lib/aws-apigateway';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import { PscUserPool } from '../cognito/user-pool';
 import { DownloadFileLambda } from '../lambda/download-file-lambda';
+import { LoginLambda } from '../lambda/login-lambda';
 import { PostLambda } from '../lambda/post-lambda';
 import { PostsLambda } from '../lambda/posts-lambda';
+import { RegisterLambda } from '../lambda/register-lambda';
 import { UploadFileLambda } from '../lambda/upload-file-lambda';
+import { VerifyUserLambda } from '../lambda/verify-user-lambda';
 
 export interface PawsConnectRestApiProps {
-    postTable: Table;
-    uploadTable: Table;
-    bucket1: Bucket;
+  postTable: Table;
+  uploadTable: Table;
+  bucket1: Bucket;
 }
 
 export class PawsConnectRestApi extends Construct {
@@ -19,32 +30,53 @@ export class PawsConnectRestApi extends Construct {
     super(scope, id);
 
     const restApi = new RestApi(this, 'PawsConnectRestApi', {
-        restApiName: 'PawsConnectRestApiV1',
-        description: 'This is the test rest api for paws connect.',
-        defaultCorsPreflightOptions: {
-            allowOrigins: Cors.ALL_ORIGINS,
-            allowMethods: Cors.ALL_METHODS,
-        },
-        apiKeySourceType: ApiKeySourceType.HEADER,
+      restApiName: 'PawsConnectRestApiV1',
+      description: 'This is the test rest api for paws connect.',
+      defaultCorsPreflightOptions: {
+        allowOrigins: Cors.ALL_ORIGINS,
+        allowMethods: Cors.ALL_METHODS,
+      },
+      apiKeySourceType: ApiKeySourceType.HEADER,
     });
     const apiKey = new ApiKey(this, 'ApiKey');
+    const userPool = new PscUserPool(this, 'PscUserPool', {});
 
     const usagePlan = new UsagePlan(this, 'UsagePlan', {
-        name: 'Usage Plan',
-        apiStages: [
-            {
-                api: restApi,
-                stage: restApi.deploymentStage
-            }
-        ]
+      name: 'Usage Plan',
+      apiStages: [
+        {
+          api: restApi,
+          stage: restApi.deploymentStage,
+        },
+      ],
     });
     usagePlan.addApiKey(apiKey);
 
     //* lambdas
-    const postLambda =  new PostLambda(this,'PostLambda', {table: props.postTable});
-    const postsLambda = new PostsLambda(this,'PostsLambda',{table: props.postTable});
-    const uploadFileLambda = new UploadFileLambda(this,'UploadFileLambda',{table: props.uploadTable, bucket: props.bucket1});
-    const downloadFileLambda = new DownloadFileLambda(this, 'DownloadFileLambda', { bucket: props.bucket1});
+    const postLambda = new PostLambda(this, 'PostLambda', {
+      table: props.postTable,
+    });
+    const postsLambda = new PostsLambda(this, 'PostsLambda', {
+      table: props.postTable,
+    });
+    const uploadFileLambda = new UploadFileLambda(this, 'UploadFileLambda', {
+      table: props.uploadTable,
+      bucket: props.bucket1,
+    });
+    const downloadFileLambda = new DownloadFileLambda(
+      this,
+      'DownloadFileLambda',
+      { bucket: props.bucket1 }
+    );
+    const loginLambda = new LoginLambda(this, 'LoginLambda', {
+      userPoolClient: userPool.userPoolClient,
+    });
+    const registerLambda = new RegisterLambda(this, 'RegisterLambda', {
+      userPoolClient: userPool.userPoolClient,
+    });
+    const verifyUserLambda = new VerifyUserLambda(this, 'VerifyUserLambda', {
+      userPoolClient: userPool.userPoolClient,
+    });
 
     //*permissions hindi to AI
     props.postTable.grantReadWriteData(postLambda.fn);
@@ -58,38 +90,54 @@ export class PawsConnectRestApi extends Construct {
     const post = posts.addResource('{id}');
     const uploadFile = restApi.root.addResource('uploads');
     const downloadFile = restApi.root.addResource('downloads');
-
+    const login = restApi.root.addResource('login');
+    const register = restApi.root.addResource('register');
+    const verifyUser = restApi.root.addResource('verify');
 
     //*integrations endpoints papunta sa lambda functions
     const postsIntegration = new LambdaIntegration(postsLambda.fn);
     const postIntegration = new LambdaIntegration(postLambda.fn);
     const uploadFileIntegration = new LambdaIntegration(uploadFileLambda.fn);
-    const downloadFileIntegration = new LambdaIntegration(downloadFileLambda.fn);
+    const downloadFileIntegration = new LambdaIntegration(
+      downloadFileLambda.fn
+    );
+    const loginIntegration = new LambdaIntegration(loginLambda.fn);
+    const registerIntegration = new LambdaIntegration(registerLambda.fn);
+    const verifyUserIntegration = new LambdaIntegration(verifyUserLambda.fn);
 
     //*methods, handling na ng mga https methods. sa wakas!
     posts.addMethod('GET', postsIntegration, {
-        apiKeyRequired: true,
+      apiKeyRequired: true,
     });
     posts.addMethod('POST', postsIntegration, {
-        apiKeyRequired: true,
+      apiKeyRequired: true,
     });
     post.addMethod('GET', postIntegration, {
-        apiKeyRequired: true,
+      apiKeyRequired: true,
     });
     post.addMethod('DELETE', postIntegration, {
-        apiKeyRequired: true,
+      apiKeyRequired: true,
     });
     uploadFile.addMethod('POST', uploadFileIntegration, {
-        apiKeyRequired: true,
+      apiKeyRequired: true,
     });
     downloadFile.addMethod('GET', downloadFileIntegration, {
-        apiKeyRequired: true,
+      apiKeyRequired: true,
+    });
+    login.addMethod('POST', loginIntegration, {
+      apiKeyRequired: false,
+    });
+    register.addMethod('POST', registerIntegration, {
+      apiKeyRequired: false,
+    });
+    verifyUser.addMethod('POST', verifyUserIntegration, {
+      apiKeyRequired: false,
     });
 
     //*print or output natin tong api key para naman makuha natin yung value at magamit sa header ng api calls
     new CfnOutput(this, 'Pang output ng API Key', {
-        value: apiKey.keyId,
-        description: 'This is the API Key for Paws Connect Rest API',
+      value: apiKey.keyId,
+      description: 'This is the API Key for Paws Connect Rest API',
     });
   }
 }
