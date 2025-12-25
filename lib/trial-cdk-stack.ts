@@ -1,16 +1,41 @@
+import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import * as cdk from 'aws-cdk-lib/core';
+import { RemovalPolicy } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
+import { PawsConnectRestApi } from './api/pawsconnect-rest-api';
+import { PsBucket1 } from './s3/ps-bucket1';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class TrialCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    const postTable = new Table(this, 'PostTable', {
+        partitionKey: {
+            name: 'pk',
+            type: AttributeType.STRING,
+        },
+        // tableName: 'Post',
+        removalPolicy: RemovalPolicy.DESTROY,
+        billingMode: BillingMode.PAY_PER_REQUEST,
+    });
+    const uploadTable = new Table(this, 'UploadTable', {
+        partitionKey: {
+            name: 'pk',
+            type: AttributeType.STRING,
+        },
+        // tableName: 'Upload',
+        removalPolicy: RemovalPolicy.DESTROY,
+        billingMode: BillingMode.PAY_PER_REQUEST,
+    });
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'TrialCdkQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    const bucket1 = new PsBucket1(this, 'PsBucket1', {});
+
+    new PawsConnectRestApi(this, 'PawsConnectRestApi', {
+        postTable: postTable,
+        uploadTable: uploadTable,
+        bucket1: bucket1.bucket,
+    });
+
   }
 }

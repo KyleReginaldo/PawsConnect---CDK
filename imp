@@ -1,0 +1,14 @@
+// {
+//     "id": "5mz1dgg7nc",
+//     "value": "ditRdErNyY7KbL7swUiHF2MOwjm1DkcV4uniqODA",
+//     "name": "TrialC-ApiKe-iNu3Rh3AVIwJ",
+//     "enabled": true,
+//     "createdDate": "2025-12-25T14:58:11+08:00",
+//     "lastUpdatedDate": "2025-12-25T14:58:11+08:00",
+//     "stageKeys": [],
+//     "tags": {
+//         "aws:cloudformation:logical-id": "ApiKeyF9DDEE66",
+//         "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-1:331690119805:stack/TrialCdkStack/efb0eb50-e15e-11f0-8fab-021755cc491d",
+//         "aws:cloudformation:stack-name": "TrialCdkStack"
+//     }
+// }
