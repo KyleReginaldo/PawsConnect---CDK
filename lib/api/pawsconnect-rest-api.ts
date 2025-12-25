@@ -118,6 +118,9 @@ export class PawsConnectRestApi extends Construct {
     post.addMethod('DELETE', postIntegration, {
       apiKeyRequired: true,
     });
+    post.addMethod('PUT', postIntegration, {
+      apiKeyRequired: true,
+    });
     uploadFile.addMethod('POST', uploadFileIntegration, {
       apiKeyRequired: true,
     });

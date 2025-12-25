@@ -11,31 +11,38 @@ export class TrialCdkStack extends cdk.Stack {
     super(scope, id, props);
 
     const postTable = new Table(this, 'PostTable', {
-        partitionKey: {
-            name: 'pk',
-            type: AttributeType.STRING,
-        },
-        // tableName: 'Post',
-        removalPolicy: RemovalPolicy.DESTROY,
-        billingMode: BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'pk',
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'sk',
+        type: AttributeType.STRING,
+      },
+      // tableName: 'Post',
+      removalPolicy: RemovalPolicy.DESTROY,
+      billingMode: BillingMode.PAY_PER_REQUEST,
     });
     const uploadTable = new Table(this, 'UploadTable', {
-        partitionKey: {
-            name: 'pk',
-            type: AttributeType.STRING,
-        },
-        // tableName: 'Upload',
-        removalPolicy: RemovalPolicy.DESTROY,
-        billingMode: BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'pk',
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'sk',
+        type: AttributeType.STRING,
+      },
+      // tableName: 'Upload',
+      removalPolicy: RemovalPolicy.DESTROY,
+      billingMode: BillingMode.PAY_PER_REQUEST,
     });
 
     const bucket1 = new PsBucket1(this, 'PsBucket1', {});
 
     new PawsConnectRestApi(this, 'PawsConnectRestApi', {
-        postTable: postTable,
-        uploadTable: uploadTable,
-        bucket1: bucket1.bucket,
+      postTable: postTable,
+      uploadTable: uploadTable,
+      bucket1: bucket1.bucket,
     });
-
   }
 }
