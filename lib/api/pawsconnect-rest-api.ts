@@ -12,6 +12,7 @@ import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { PscUserPool } from '../cognito/user-pool';
 import { DownloadFileLambda } from '../lambda/download-file-lambda';
+import { GetProfileLambda } from '../lambda/get-profile-lambda';
 import { LoginLambda } from '../lambda/login-lambda';
 import { PostLambda } from '../lambda/post-lambda';
 import { PostsLambda } from '../lambda/posts-lambda';
@@ -22,6 +23,7 @@ import { VerifyUserLambda } from '../lambda/verify-user-lambda';
 export interface PawsConnectRestApiProps {
   postTable: Table;
   uploadTable: Table;
+  profileTable: Table;
   bucket1: Bucket;
 }
 
@@ -73,9 +75,13 @@ export class PawsConnectRestApi extends Construct {
     });
     const registerLambda = new RegisterLambda(this, 'RegisterLambda', {
       userPoolClient: userPool.userPoolClient,
+      table: props.profileTable,
     });
     const verifyUserLambda = new VerifyUserLambda(this, 'VerifyUserLambda', {
       userPoolClient: userPool.userPoolClient,
+    });
+    const getProfileLambda = new GetProfileLambda(this, 'GetProfileLambda', {
+      table: props.profileTable,
     });
 
     //*permissions hindi to AI
@@ -84,6 +90,8 @@ export class PawsConnectRestApi extends Construct {
     props.bucket1.grantPut(uploadFileLambda.fn);
     props.bucket1.grantRead(downloadFileLambda.fn);
     props.uploadTable.grantReadWriteData(uploadFileLambda.fn);
+    props.profileTable.grantReadWriteData(registerLambda.fn);
+    props.profileTable.grantReadData(getProfileLambda.fn);
 
     //*endpoints hindi rin to AI
     const posts = restApi.root.addResource('posts');
@@ -93,6 +101,8 @@ export class PawsConnectRestApi extends Construct {
     const login = restApi.root.addResource('login');
     const register = restApi.root.addResource('register');
     const verifyUser = restApi.root.addResource('verify');
+    const profiles = restApi.root.addResource('profile');
+    const profile = profiles.addResource('{id}');
 
     //*integrations endpoints papunta sa lambda functions
     const postsIntegration = new LambdaIntegration(postsLambda.fn);
@@ -104,6 +114,7 @@ export class PawsConnectRestApi extends Construct {
     const loginIntegration = new LambdaIntegration(loginLambda.fn);
     const registerIntegration = new LambdaIntegration(registerLambda.fn);
     const verifyUserIntegration = new LambdaIntegration(verifyUserLambda.fn);
+    const getProfileIntegration = new LambdaIntegration(getProfileLambda.fn);
 
     //*methods, handling na ng mga https methods. sa wakas!
     posts.addMethod('GET', postsIntegration, {
@@ -135,6 +146,9 @@ export class PawsConnectRestApi extends Construct {
     });
     verifyUser.addMethod('POST', verifyUserIntegration, {
       apiKeyRequired: false,
+    });
+    profile.addMethod('GET', getProfileIntegration, {
+      apiKeyRequired: true,
     });
 
     //*print or output natin tong api key para naman makuha natin yung value at magamit sa header ng api calls

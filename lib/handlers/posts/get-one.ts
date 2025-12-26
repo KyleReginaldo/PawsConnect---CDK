@@ -2,7 +2,7 @@ import { DynamoDB } from '@aws-sdk/client-dynamodb';
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
 
 const dynamodb = new DynamoDB();
-export async function getOne({ id }: { id: string }) {
+export async function getOne({ id, userId }: { id: string; userId: string }) {
   if (!id) {
     return {
       statusCode: 400,
@@ -13,6 +13,7 @@ export async function getOne({ id }: { id: string }) {
     new GetCommand({
       TableName: process.env.TABLE_NAME,
       Key: {
+        pk: `USER#${userId}`,
         sk: `POST#${id}`,
       },
     })

@@ -17,7 +17,13 @@ export const handler = async (event: APIGatewayProxyEvent) => {
   try {
     switch (event.httpMethod) {
       case 'GET':
-        return await getOne({ id });
+        if (!userId) {
+          return {
+            statusCode: 400,
+            body: JSON.stringify({ message: 'Missing userId query parameter' }),
+          };
+        }
+        return await getOne({ id, userId: userId });
       case 'DELETE':
         return await deletePost({ id });
       case 'PUT':
@@ -38,7 +44,9 @@ export const handler = async (event: APIGatewayProxyEvent) => {
     console.log(`post handler error: ${error}`);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: error }),
+      body: JSON.stringify({
+        message: error instanceof Error ? error.message : error,
+      }),
     };
   }
 };

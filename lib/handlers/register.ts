@@ -2,8 +2,10 @@ import {
   CognitoIdentityProviderClient,
   SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { DynamoDB, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { z } from 'zod';
 const client = new CognitoIdentityProviderClient({});
+const dynamodb = new DynamoDB();
 export const RegisterSchema = z.object({
   email: z.email(),
   password: z.string().min(8),
@@ -19,13 +21,31 @@ export const handler = async (event: any) => {
       };
     }
     const { email, password } = bodyParsed;
-    await client.send(
+    const result = await client.send(
       new SignUpCommand({
         ClientId: process.env.CLIENT_ID!,
         Username: email,
         Password: password,
       })
     );
+    if (result.UserSub) {
+      await dynamodb.send(
+        new PutItemCommand({
+          TableName: process.env.TABLE_NAME!,
+          Item: {
+            pk: { S: `USER#${result.UserSub}` },
+            sk: { S: `METADATA#${result.UserSub}` },
+            email: { S: email },
+            confirmed: { BOOL: false },
+          },
+        })
+      );
+    } else {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ message: 'User registration failed' }),
+      };
+    }
     return {
       statusCode: 200,
       body: JSON.stringify({ message: 'User registered successfully' }),

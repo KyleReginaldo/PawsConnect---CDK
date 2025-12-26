@@ -1,9 +1,11 @@
 import { UserPoolClient } from 'aws-cdk-lib/aws-cognito';
+import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 
 export interface RegisterLambdaProps {
   userPoolClient: UserPoolClient;
+  table: Table;
 }
 
 export class RegisterLambda extends Construct {
@@ -16,6 +18,7 @@ export class RegisterLambda extends Construct {
       handler: 'handler',
       environment: {
         CLIENT_ID: props.userPoolClient.userPoolClientId,
+        TABLE_NAME: props.table.tableName,
       },
       bundling: {
         forceDockerBundling: false,

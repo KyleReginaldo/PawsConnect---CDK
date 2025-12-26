@@ -19,7 +19,6 @@ export class TrialCdkStack extends cdk.Stack {
         name: 'sk',
         type: AttributeType.STRING,
       },
-      // tableName: 'Post',
       removalPolicy: RemovalPolicy.DESTROY,
       billingMode: BillingMode.PAY_PER_REQUEST,
     });
@@ -32,7 +31,19 @@ export class TrialCdkStack extends cdk.Stack {
         name: 'sk',
         type: AttributeType.STRING,
       },
-      // tableName: 'Upload',
+      removalPolicy: RemovalPolicy.DESTROY,
+      billingMode: BillingMode.PAY_PER_REQUEST,
+    });
+
+    const profileTable = new Table(this, 'ProfileTable', {
+      partitionKey: {
+        name: 'pk',
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'sk',
+        type: AttributeType.STRING,
+      },
       removalPolicy: RemovalPolicy.DESTROY,
       billingMode: BillingMode.PAY_PER_REQUEST,
     });
@@ -40,8 +51,9 @@ export class TrialCdkStack extends cdk.Stack {
     const bucket1 = new PsBucket1(this, 'PsBucket1', {});
 
     new PawsConnectRestApi(this, 'PawsConnectRestApi', {
-      postTable: postTable,
-      uploadTable: uploadTable,
+      postTable,
+      uploadTable,
+      profileTable,
       bucket1: bucket1.bucket,
     });
   }
