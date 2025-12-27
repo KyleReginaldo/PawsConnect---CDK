@@ -6,7 +6,7 @@ const dynamodb = new DynamoDB();
 export const CreatePetSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  type: z.string(),
+  petType: z.string(),
   breed: z.string().optional(),
   age: z.number().min(0),
   gender: z.enum(['male', 'female']),
@@ -34,6 +34,9 @@ export async function create(body: string | null) {
         TableName: process.env.TABLE_NAME!,
         Item: {
           pk: `PET#${uuid}`,
+          sk: 'PROFILE',
+          GSI1PK: `PET`,
+          GSI1SK: `CREATED_AT#${new Date().toISOString()}`,
           createdAt: new Date().toISOString(),
           ...bodyParsed,
         },

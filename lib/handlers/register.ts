@@ -34,7 +34,10 @@ export const handler = async (event: any) => {
           TableName: process.env.TABLE_NAME!,
           Item: {
             pk: { S: `USER#${result.UserSub}` },
-            sk: { S: `METADATA#${result.UserSub}` },
+            sk: { S: `PROFILE` },
+            GSI1PK: { S: `USER` },
+            GSI1SK: { S: `CREATED_AT#${new Date().toISOString()}` },
+            createdAt: { S: new Date().toISOString() },
             email: { S: email },
             confirmed: { BOOL: false },
           },

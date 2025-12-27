@@ -29,6 +29,9 @@ export async function create(body: string | null) {
       Item: {
         pk: `USER#${bodyParsed.userId}`,
         sk: `POST#${uuid}`,
+        GSI1PK: `POST`,
+        GSI1SK: `CREATED_AT#${new Date().toISOString()}`,
+        createdAt: new Date().toISOString(),
         title: bodyParsed.title,
         description: bodyParsed.description,
         publicationDate: bodyParsed.publicationDate,

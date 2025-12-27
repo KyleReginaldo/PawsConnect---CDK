@@ -8,22 +8,21 @@ import {
   UsagePlan,
 } from 'aws-cdk-lib/aws-apigateway';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { PscUserPool } from '../cognito/user-pool';
 import { DownloadFileLambda } from '../lambda/download-file-lambda';
 import { GetProfileLambda } from '../lambda/get-profile-lambda';
 import { LoginLambda } from '../lambda/login-lambda';
+import { PetsLambda } from '../lambda/pets-lambda';
 import { PostLambda } from '../lambda/post-lambda';
 import { PostsLambda } from '../lambda/posts-lambda';
 import { RegisterLambda } from '../lambda/register-lambda';
 import { UploadFileLambda } from '../lambda/upload-file-lambda';
 import { VerifyUserLambda } from '../lambda/verify-user-lambda';
-
 export interface PawsConnectRestApiProps {
-  postTable: Table;
-  uploadTable: Table;
-  profileTable: Table;
+  table: Table;
   bucket1: Bucket;
 }
 
@@ -56,13 +55,13 @@ export class PawsConnectRestApi extends Construct {
 
     //* lambdas
     const postLambda = new PostLambda(this, 'PostLambda', {
-      table: props.postTable,
+      table: props.table,
     });
     const postsLambda = new PostsLambda(this, 'PostsLambda', {
-      table: props.postTable,
+      table: props.table,
     });
     const uploadFileLambda = new UploadFileLambda(this, 'UploadFileLambda', {
-      table: props.uploadTable,
+      table: props.table,
       bucket: props.bucket1,
     });
     const downloadFileLambda = new DownloadFileLambda(
@@ -75,23 +74,35 @@ export class PawsConnectRestApi extends Construct {
     });
     const registerLambda = new RegisterLambda(this, 'RegisterLambda', {
       userPoolClient: userPool.userPoolClient,
-      table: props.profileTable,
+      table: props.table,
     });
     const verifyUserLambda = new VerifyUserLambda(this, 'VerifyUserLambda', {
       userPoolClient: userPool.userPoolClient,
     });
     const getProfileLambda = new GetProfileLambda(this, 'GetProfileLambda', {
-      table: props.profileTable,
+      table: props.table,
+    });
+    const petsLambda = new PetsLambda(this, 'PetsLambda', {
+      table: props.table,
     });
 
     //*permissions hindi to AI
-    props.postTable.grantReadWriteData(postLambda.fn);
-    props.postTable.grantReadWriteData(postsLambda.fn);
+    props.table.grantReadWriteData(postLambda.fn);
+    props.table.grantReadWriteData(postsLambda.fn);
     props.bucket1.grantPut(uploadFileLambda.fn);
     props.bucket1.grantRead(downloadFileLambda.fn);
-    props.uploadTable.grantReadWriteData(uploadFileLambda.fn);
-    props.profileTable.grantReadWriteData(registerLambda.fn);
-    props.profileTable.grantReadData(getProfileLambda.fn);
+    props.table.grantReadWriteData(uploadFileLambda.fn);
+    props.table.grantReadWriteData(registerLambda.fn);
+    props.table.grantReadData(getProfileLambda.fn);
+    props.table.grantReadWriteData(petsLambda.fn);
+
+    //!role policies
+    petsLambda.fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['dynamodb:Query'],
+        resources: [props.table.tableArn, `${props.table.tableArn}/index/*`],
+      })
+    );
 
     //*endpoints hindi rin to AI
     const posts = restApi.root.addResource('posts');
@@ -103,6 +114,7 @@ export class PawsConnectRestApi extends Construct {
     const verifyUser = restApi.root.addResource('verify');
     const profiles = restApi.root.addResource('profile');
     const profile = profiles.addResource('{id}');
+    const pets = restApi.root.addResource('pets');
 
     //*integrations endpoints papunta sa lambda functions
     const postsIntegration = new LambdaIntegration(postsLambda.fn);
@@ -115,6 +127,7 @@ export class PawsConnectRestApi extends Construct {
     const registerIntegration = new LambdaIntegration(registerLambda.fn);
     const verifyUserIntegration = new LambdaIntegration(verifyUserLambda.fn);
     const getProfileIntegration = new LambdaIntegration(getProfileLambda.fn);
+    const petsIntegration = new LambdaIntegration(petsLambda.fn);
 
     //*methods, handling na ng mga https methods. sa wakas!
     posts.addMethod('GET', postsIntegration, {
@@ -148,6 +161,12 @@ export class PawsConnectRestApi extends Construct {
       apiKeyRequired: false,
     });
     profile.addMethod('GET', getProfileIntegration, {
+      apiKeyRequired: true,
+    });
+    pets.addMethod('POST', petsIntegration, {
+      apiKeyRequired: true,
+    });
+    pets.addMethod('GET', petsIntegration, {
       apiKeyRequired: true,
     });
 

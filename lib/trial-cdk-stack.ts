@@ -1,4 +1,9 @@
-import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
+import {
+  AttributeType,
+  BillingMode,
+  ProjectionType,
+  Table,
+} from 'aws-cdk-lib/aws-dynamodb';
 import * as cdk from 'aws-cdk-lib/core';
 import { RemovalPolicy } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
@@ -10,7 +15,7 @@ export class TrialCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const postTable = new Table(this, 'PostTable', {
+    const pawsConnectTable = new Table(this, 'PawsConnectTable', {
       partitionKey: {
         name: 'pk',
         type: AttributeType.STRING,
@@ -19,41 +24,28 @@ export class TrialCdkStack extends cdk.Stack {
         name: 'sk',
         type: AttributeType.STRING,
       },
-      removalPolicy: RemovalPolicy.DESTROY,
-      billingMode: BillingMode.PAY_PER_REQUEST,
-    });
-    const uploadTable = new Table(this, 'UploadTable', {
-      partitionKey: {
-        name: 'pk',
-        type: AttributeType.STRING,
-      },
-      sortKey: {
-        name: 'sk',
-        type: AttributeType.STRING,
-      },
-      removalPolicy: RemovalPolicy.DESTROY,
-      billingMode: BillingMode.PAY_PER_REQUEST,
-    });
 
-    const profileTable = new Table(this, 'ProfileTable', {
+      tableName: 'paws-connect-table',
+      removalPolicy: RemovalPolicy.DESTROY,
+      billingMode: BillingMode.PAY_PER_REQUEST,
+    });
+    pawsConnectTable.addGlobalSecondaryIndex({
+      indexName: 'GSI1',
       partitionKey: {
-        name: 'pk',
+        name: 'GSI1PK',
         type: AttributeType.STRING,
       },
       sortKey: {
-        name: 'sk',
+        name: 'GSI1SK',
         type: AttributeType.STRING,
       },
-      removalPolicy: RemovalPolicy.DESTROY,
-      billingMode: BillingMode.PAY_PER_REQUEST,
+      projectionType: ProjectionType.ALL,
     });
 
     const bucket1 = new PsBucket1(this, 'PsBucket1', {});
 
     new PawsConnectRestApi(this, 'PawsConnectRestApi', {
-      postTable,
-      uploadTable,
-      profileTable,
+      table: pawsConnectTable,
       bucket1: bucket1.bucket,
     });
   }

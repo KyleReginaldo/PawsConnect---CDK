@@ -17,7 +17,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
         TableName: process.env.TABLE_NAME!,
         Key: {
           pk: `USER#${userId}`,
-          sk: `METADATA#${userId}`,
+          sk: `PROFILE`,
         },
       })
     );
