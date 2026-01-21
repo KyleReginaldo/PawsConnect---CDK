@@ -8,13 +8,15 @@ import {
   UsagePlan,
 } from 'aws-cdk-lib/aws-apigateway';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { PscUserPool } from '../cognito/user-pool';
+import { AdoptionLambda } from '../lambda/adoption-lambda';
+import { AdoptionsLambda } from '../lambda/adpotions-lambda';
 import { DownloadFileLambda } from '../lambda/download-file-lambda';
 import { GetProfileLambda } from '../lambda/get-profile-lambda';
 import { LoginLambda } from '../lambda/login-lambda';
+import { PetLambda } from '../lambda/pet-lambda';
 import { PetsLambda } from '../lambda/pets-lambda';
 import { PostLambda } from '../lambda/post-lambda';
 import { PostsLambda } from '../lambda/posts-lambda';
@@ -85,6 +87,15 @@ export class PawsConnectRestApi extends Construct {
     const petsLambda = new PetsLambda(this, 'PetsLambda', {
       table: props.table,
     });
+    const petLambda = new PetLambda(this, 'PetLambda', {
+      table: props.table,
+    });
+    const adoptionsLambda = new AdoptionsLambda(this, 'AdoptionsLambda', {
+      table: props.table,
+    });
+    const adoptionLambda = new AdoptionLambda(this, 'AdoptionLambda', {
+      table: props.table,
+    });
 
     //*permissions hindi to AI
     props.table.grantReadWriteData(postLambda.fn);
@@ -95,14 +106,9 @@ export class PawsConnectRestApi extends Construct {
     props.table.grantReadWriteData(registerLambda.fn);
     props.table.grantReadData(getProfileLambda.fn);
     props.table.grantReadWriteData(petsLambda.fn);
-
-    //!role policies
-    petsLambda.fn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['dynamodb:Query'],
-        resources: [props.table.tableArn, `${props.table.tableArn}/index/*`],
-      })
-    );
+    props.table.grantReadWriteData(petLambda.fn);
+    props.table.grantReadWriteData(adoptionsLambda.fn);
+    props.table.grantReadWriteData(adoptionLambda.fn);
 
     //*endpoints hindi rin to AI
     const posts = restApi.root.addResource('posts');
@@ -115,6 +121,9 @@ export class PawsConnectRestApi extends Construct {
     const profiles = restApi.root.addResource('profile');
     const profile = profiles.addResource('{id}');
     const pets = restApi.root.addResource('pets');
+    const pet = pets.addResource('{id}');
+    const adoptions = restApi.root.addResource('adoptions');
+    const adoption = adoptions.addResource('{id}');
 
     //*integrations endpoints papunta sa lambda functions
     const postsIntegration = new LambdaIntegration(postsLambda.fn);
@@ -128,6 +137,9 @@ export class PawsConnectRestApi extends Construct {
     const verifyUserIntegration = new LambdaIntegration(verifyUserLambda.fn);
     const getProfileIntegration = new LambdaIntegration(getProfileLambda.fn);
     const petsIntegration = new LambdaIntegration(petsLambda.fn);
+    const petIntegration = new LambdaIntegration(petLambda.fn);
+    const adoptionsIntegration = new LambdaIntegration(adoptionsLambda.fn);
+    const adoptionIntegration = new LambdaIntegration(adoptionLambda.fn);
 
     //*methods, handling na ng mga https methods. sa wakas!
     posts.addMethod('GET', postsIntegration, {
@@ -169,8 +181,26 @@ export class PawsConnectRestApi extends Construct {
     pets.addMethod('GET', petsIntegration, {
       apiKeyRequired: true,
     });
+    pet.addMethod('GET', petIntegration, {
+      apiKeyRequired: true,
+    });
+    pet.addMethod('DELETE', petIntegration, {
+      apiKeyRequired: true,
+    });
+    adoptions.addMethod('POST', adoptionsIntegration, {
+      apiKeyRequired: true,
+    });
+    adoptions.addMethod('GET', adoptionsIntegration, {
+      apiKeyRequired: true,
+    });
+    adoption.addMethod('GET', adoptionIntegration, {
+      apiKeyRequired: true,
+    });
+    adoption.addMethod('DELETE', adoptionIntegration, {
+      apiKeyRequired: true,
+    });
 
-    //*print or output natin tong api key para naman makuha natin yung value at magamit sa header ng api calls
+    //! print or output natin tong api key para naman makuha natin yung value at magamit sa header ng api calls
     new CfnOutput(this, 'Pang output ng API Key', {
       value: apiKey.keyId,
       description: 'This is the API Key for Paws Connect Rest API',
